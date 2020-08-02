@@ -98,8 +98,8 @@ app.post('/feed', (req,res)=>{
     //                         VALUES ('${element.FeedCode}', '${element.MDate}', '${element.Lot}', '${element.Amount}', '${element.PPK}' );`      
     //                     break
     //                 }
-    req.body.data.forEach((element)=>{
-        console.log("Feed "+ element.FeedCode +" เลขล็อต "+element.Lot+" Amount: "+element.Amount+" กก. ราคา = "+element.PPK+ " ต่อกก.")
+    req.body.data.forEach(function(element, index){
+        console.log("รายการที่ "+(index+1) + " Feed "+ element.FeedCode +" เลขล็อต "+element.Lot+" Amount: "+element.Amount+" กก. ราคา = "+element.PPK+ " ต่อกก.")
     })
 
     mfcLog =  `INSERT INTO Event_Logs (EventDate, Creator, EventType, PigId, PigType)values( '${req.body.data[0].MDate}', '-1', '81', '0', 'A');`
@@ -113,12 +113,12 @@ app.get('/',(req,res)=>{
 })
 
 app.get('/client', (req, res)=>{
-    const q = 'SELECT * FROM Client_Manifold'
+    const q = 'SELECT * FROM Client_Manifold WHERE active ORDER BY T_name'
     pool.query(q, function(error,rows){
         if(error) throw error
         let clientList = '<table class="table table-hover table-sm"><th>id</th><th>Name</th><th>Class</th><th>ref1</th><th>vpat_Ref1</th>'
         rows.forEach(client => {
-            clientList += '<tr><td>'+client.id+'</td><td>'+client.Name+'</td><td>'+client.Class+'</td><td>'+client.ref1+'</td><td>'+client.vpat_Ref1+'</td><tr>'
+            clientList += '<tr><td>'+client.id+'</td><td>'+client.T_name+'</td><td>'+client.Class+'</td><td>'+client.ref1+'</td><td>'+client.vpat_Ref1+'</td><tr>'
         });
         res.render('clients',{title:'หมูจ๋า CE', clientList: clientList })
     })
@@ -154,10 +154,12 @@ app.get('/feed/map/json', (req, res)=>{
     pool.query(feedMap, (err,rows)=>{
         if(err)throw err
         const farmFeed = []
+        const jsonFeed = {"feed":farmFeed}
         rows.forEach(feed => {
             farmFeed.push({id:feed.id, feedCode:feed.FeedCode, Def:feed.Definition, Tdef:feed.T_Definition})
         })
-        res.send(farmFeed)
+        // res.send(farmFeed)
+        res.send(jsonFeed)
        //console.log(farmFeed)
     })
 })
