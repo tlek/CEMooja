@@ -17,6 +17,7 @@ const hbs = require('hbs')
 const express = require('express')
 const { isBuffer } = require('util')
 const { json } = require('body-parser')
+const { setupMaster } = require('cluster')
 const app = express()
 const port = process.env.PORT || 3000
 
@@ -63,100 +64,25 @@ app.post('/feed',(req,res)=>{
     res.send(`Received feed manufactored info ${req.body.data.length} lots.`)
     //? this way sender will get acknowledge if message was receieve however if error after call sql no error shown just no record add or updated
 })
-// app.post('/feed',(req, res)=>{
-//     const chkType = `SELECT * FROM Feed_Codes WHERE FeedCode = '${req.query.FeedCode}';`
-//     const chkRepeat = `SELECT * FROM Feed_Manifold WHERE Lot_Number = '${req.query.Lot}';`
-//     const q = `INSERT INTO Feed_Manifold (Type, Date, Lot_Number, Amount, PPK) \
-//      VALUES ('${req.query.FeedCode}', '${req.query.MDate}', '${req.query.Lot}', '${req.query.Amount}', '${req.query.PPK}' );`
-//     const journal = `INSERT INTO Event_Logs (EventDate, Creator, EventType, PigId, PigType)values( '${req.query.MDate}', '3', '81', '0', 'V');`
-//     pool.query(chkType, (error, rows)=>{
-//         if(error) throw error
-//         if (rows.length === 0){
-//             res.send('Unreconized Feed Code')
-//             console.log(chkType)
-//             console.log(req.query)
-//         } else {
-//             console.log(req.query)
-//             console.log(row.length) 
-//             pool.query(chkRepeat,(error, rows)=>{
-//                 if(error) throw error
-//                 if(rows.length > 0){
-//                     res.send('Lot number of This feed had been received and cannot be duplicated. Please check the lot number')
-//                     console.log('Repeated lot number Attempted')
-//                 } else {
-//                     pool.query(q,(error)=>{
-//                         if(error)throw error
-//                         res.send('New Feed batch info received')
-//                         pool.query(journal,(error)=>{
-//                             if (error) throw error
-//                             console.log("The new feed batch info received and Journaled")
-//                         })
-//                     })
-//                 }
-//             })
-//        }
-//     })
-// }) 
- //? still not good
-// app.post('/feed', (req,res)=>{
-//     // let updated = 0, added = 0
-//     // const objectResult = {"Updated": updated, "Added": added}
-//     console.log(req.body)
-//     const madeFeed = function(lotNo, objectResult, callback){
-//         return new Promise((add, update)=>{
-//             const chkRepeat = `SELECT * FROM Feed_Manifold WHERE Lot_Number = '${lotNo}';`
-//             pool.query(chkRepeat,(error, rows)=>{
-//                 if(error)throw error
-//                 if(rows.length > 0){
-//                     update()
-//                     objectResult.Updated++
-//                     callback(objectResult)
-                    
-//                 }else {
-//                     add()
-//                     objectResult.Added++
-//                     callback(objectResult)
-//                 }
-//             })
-//         })
-//     }
-
-//     const roleCheck = function(feedArray, callback){
-//         let updated = 0, added = 0
-//         const objectResult = {"Updated": updated, "Added": added}
-//         feedArray.forEach(function(element, index){
-//             console.log("รายการที่ "+(index+1) + " Feed "+ element.FeedCode +" เลขล็อต "+element.Lot+" Amount: "+element.Amount+" กก. ราคา = "+element.PPK+ " ต่อกก.")
-//             madeFeed(element.Lot,objectResult, ()=>{
-//                 console.log(objectResult)
-//             //res.send(`Received feed manufactored info ${req.body.data.length} lots. Updated : ${objectResult.Updated} New : ${objectResult.Added}`)
-//             }) 
-//             .then(()=>{
-//                 console.log("must add new record for " + element.Lot)
-
-//             })
-//             .catch(()=>{
-//                 console.log( "just update record "+ element.Lot)
-//             })
-//         })
-//         callback(objectResult)
-//     }
-  
-//     mfcLog =  `INSERT INTO Event_Logs (EventDate, Creator, EventType, PigId, PigType)values( '${req.body.data[0].MDate}', '-1', '81', '0', 'A');`
-//     // excute one time here
-  
-// //   res.send("Received feed manufactored info "+ req.body.data.length + " lots")
-//     roleCheck(req.body.data,(objectResult)=>{
-//         console.log(`Received feed manufactored info ${req.body.data.length} lots. Updated : ${objectResult.Updated} New : ${objectResult.Added}`)
-//         res.send(`Received feed manufactored info ${req.body.data.length} lots. Updated : ${objectResult.Updated} New : ${objectResult.Added}`)
-//     })
-// })
 
 app.get('/',(req,res)=>{ 
     res.render('index',{title:'หมูจ๋า CE bridge', msg:'temporary for testing only มีไว้ชั่วคราวสำหรับการทดสอบ', author:'Somporn'})
 })
 
-app.get('/client', (req, res)=>{
-    const q = 'SELECT * FROM Client_Manifold WHERE active ORDER BY T_name '
+app.get('/contractor', (req, res)=>{
+    const q = 'SELECT * FROM Client_Manifold WHERE Class = "C" && active ORDER BY T_name '
+    pool.query(q, function(error,rows){
+        if(error) throw error
+        let clientList = '<table class="table table-hover table-sm"><th>id</th><th>Name</th><th>Class</th><th>ref1</th><th>AC_Id</th>'
+        rows.forEach(client => {
+            clientList += '<tr><td>'+client.id+'</td><td>'+client.T_name+'</td><td>'+client.Class+'</td><td>'+client.ref1+'</td><td>'+client.vpat_Ref1+'</td><tr>'
+        });
+        res.render('clients',{title:'หมูจ๋า CE', clientList: clientList })
+    })
+})
+
+app.get('/butcher', (req, res)=>{
+    const q = 'SELECT * FROM Client_Manifold WHERE active && Class = "T"  ORDER BY T_name '
     pool.query(q, function(error,rows){
         if(error) throw error
         let clientList = '<table class="table table-hover table-sm"><th>id</th><th>Name</th><th>Class</th><th>ref1</th><th>AC_Id</th>'
@@ -204,9 +130,9 @@ app.get('/feed/map/json', (req, res)=>{
         // res.send(farmFeed)
         res.send(jsonFeed)
        //console.log(farmFeed)
+       console.log(rows)
     })
 })
-
 
 app.get('/ce/qtest', (req,res)=>{
     sql.connect(config, function (err) {   
@@ -235,13 +161,45 @@ app.get('/ce/intRequest',(req,res)=>{
 }) 
 
 app.get('/ce/catch',(req,res)=>{
-
-    res.send('coming soon will have catching info in JSON for A/P')
+    console.log(req.query)
+    if (req.query.from == null || req.query.to == null){
+        res.send('กรุณาระบุช่วงวันที่ด้วย')
+    } else {
+        const saleInfo = 'SELECT * FROM Cbatches WHERE FinishedDate Between "'+ req.query.from +'" AND "'+req.query.to+ '" && Stage = 4'
+        pool.query(saleInfo, (err,rows)=>{
+            if(err)throw err
+            const contractor = []
+            const jsonAP = {"batchData":contractor} 
+            //console.log(rows)
+            rows.forEach(saleInfo => {
+                contractor.push({})
+            })
+          res.send(jsonAP)
+        })
+    }
 })
 
 app.get('/ce/sell',(req,res)=>{
+    console.log(req.query)
+    if (req.query.from == null || req.query.to == null){
+        res.send('กรุณาระบุช่วงวันที่ด้วย')
+    } else {
+        const saleInfo = 'select Client_Manifold.vpac_Ref1, T_name, Date, sum(Amount) as headCount, sum(Param2) as weight From Cbatch_Details left join Client_Manifold ON Reference4 = Client_Manifold.id where Date Between "'+ req.query.from +'" AND "'+req.query.to+ '" && ( EventType = 231 || EventType = 232 ) && void != 1 group by Reference4, Date;' 
+        pool.query(saleInfo, (err,rows)=>{
+            if(err)throw err
+            const catcher = []
+            const jsonAR = {"saleOrder":catcher} 
+            //console.log(rows)
+            rows.forEach(saleInfo => {
+                catcher.push({AC_Id:saleInfo.vpac_Ref1, name:saleInfo.T_name, date:saleInfo.Date, headCount:saleInfo.headCount, weight:saleInfo.weight})
+            })
+          res.send(jsonAR)
+        })
+    }
+})
 
-    res.send('coming soon will have selling info in JSON ready for A/R')
+app.get('/ce/liveStock',(req,res)=>{
+    res.send('will send pig inventory on request date')
 })
 
 app.get('*',(req, res)=>{
