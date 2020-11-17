@@ -2,7 +2,7 @@ const pool = {
     host: 'blackie.synology.me',
     port: 3307,
     user: 'foo',
-    password: 'OOOttafagvah#1918',
+    password: 'uqoqPLWsef9cf2qa!',
     database: 'rochanaTest',
     dateStrings: true,
     multipleStatements: true

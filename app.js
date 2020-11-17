@@ -70,7 +70,9 @@ app.post('/feed', (req, res) => {
 app.post('/ce/sell/setFlag', (req, res) => {
     //console.log(req.body.data)
     req.body.data.forEach((element) => {
+
         const sql = `CALL setFlag('${element.AC_Id}','${element.ce}', '${element.detailId}', '${element.flag}',@p4); SELECT @p4 AS acId;`
+        //console.log(sql)
         pool.query(sql, (error, rows) => {
             if (error) throw error
             if (rows.length === 0) {
@@ -92,7 +94,7 @@ app.post('/ce/sell/setRef1', (req, res) => {
             if (rows.length === 0) {
                 console.log("return null")
             } else {
-                //console.log("Client A/C ID = " + rows[rows.length - 1][0].acId)
+                // console.log("Client A/C ID = " + rows[rows.length - 1][0].acId)
             }
         })
     })
@@ -236,7 +238,7 @@ app.get('/ce/sell', (req, res) => {
     //console.log(req.query)
     if (req.query.from == null || req.query.to == null) {
         res.send('กรุณาระบุช่วงวันที่ด้วย')
-    } else if (req.query.flag == null || req.query.AC_Ref1 == null) {
+    } else if (req.query.flag == null) {
         const saleInfo = 'select Client_Manifold.vpac_Ref1, T_name, Date, sum(Amount) as headCount, sum(Param2) as weight, Reference4, Cbatch_Details.id as detailId, flag, AC_Ref1, void From Cbatch_Details left join Client_Manifold ON Reference4 = Client_Manifold.id where Date Between "' + req.query.from + '" AND "' + req.query.to + '" && ( EventType = 231 || EventType = 232 ) group by Date, Reference4;'
         const saleBasic = 'select Client_Manifold.vpac_Ref1, T_name, Date, Sum(Amount) as headCount, sum(Param1) as weight, Reference1, Batch_Details.id as detailId, flag, AC_Ref1, void  from Batch_Details left join Client_Manifold ON Reference1 = Client_Manifold.id where Date Between "' + req.query.from + '" AND "' + req.query.to + '" &&  EventType = 32 group by Date, Reference1;'
         console.log('either null')
@@ -266,8 +268,8 @@ app.get('/ce/sell', (req, res) => {
             })
         })
     } else {
-        const saleInfo = 'select Client_Manifold.vpac_Ref1, T_name, Date, sum(Amount) as headCount, sum(Param2) as weight, Reference4, Cbatch_Details.id as detailId, flag, AC_Ref1, void From Cbatch_Details left join Client_Manifold ON Reference4 = Client_Manifold.id where Date Between "' + req.query.from + '" AND "' + req.query.to + '" && ( EventType = 231 || EventType = 232 ) && flag = "' + req.query.flag + '"&& AC_Ref1 = "' + req.query.AC_Ref1 + '" group by Date, Reference4;'
-        const saleBasic = 'select Client_Manifold.vpac_Ref1, T_name, Date, Sum(Amount) as headCount, sum(Param1) as weight, Reference1, Batch_Details.id as detailId, flag, AC_Ref1, void  from Batch_Details left join Client_Manifold ON Reference1 = Client_Manifold.id where Date Between "' + req.query.from + '" AND "' + req.query.to + '" &&  EventType = 32 && flag = "' + req.query.flag + '"&& AC_Ref1 = "' + req.query.AC_Ref1 + '"  group by Date, Reference1;'
+        const saleInfo = 'select Client_Manifold.vpac_Ref1, T_name, Date, sum(Amount) as headCount, sum(Param2) as weight, Reference4, Cbatch_Details.id as detailId, flag, AC_Ref1, void From Cbatch_Details left join Client_Manifold ON Reference4 = Client_Manifold.id where Date Between "' + req.query.from + '" AND "' + req.query.to + '" && ( EventType = 231 || EventType = 232 ) && flag = "' + req.query.flag + '" group by Date, Reference4;'
+        const saleBasic = 'select Client_Manifold.vpac_Ref1, T_name, Date, Sum(Amount) as headCount, sum(Param1) as weight, Reference1, Batch_Details.id as detailId, flag, AC_Ref1, void  from Batch_Details left join Client_Manifold ON Reference1 = Client_Manifold.id where Date Between "' + req.query.from + '" AND "' + req.query.to + '" &&  EventType = 32 && flag = "' + req.query.flag + '"  group by Date, Reference1;'
         //console.log(saleInfo)
         pool.query(saleInfo, (err, rows) => {
             if (err) throw err
