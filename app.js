@@ -18,6 +18,7 @@ const express = require('express')
 const { isBuffer } = require('util')
 const { json } = require('body-parser')
 const { setupMaster } = require('cluster')
+const { query } = require('express')
 const app = express()
 const port = process.env.PORT || 3000
 
@@ -41,8 +42,6 @@ const pool = mysql.createPool(require('./dbh.js'))
 //     dateStrings: true,
 //     multipleStatements: true
 // })
-
-
 //pool.connect()
 // app.post('/feed',(req,res)=>{
 //     console.log(req.query)
@@ -68,9 +67,9 @@ app.post('/feed', (req, res) => {
 })
 
 app.post('/ce/sell/setFlag', (req, res) => {
-    //console.log(req.body.data)
+    console.log(req.body.data)
     req.body.data.forEach((element) => {
-
+        //! will have error detection on null value when implement promise 
         const sql = `CALL setFlag('${element.AC_Id}','${element.ce}', '${element.detailId}', '${element.flag}',@p4); SELECT @p4 AS acId;`
         //console.log(sql)
         pool.query(sql, (error, rows) => {
@@ -168,6 +167,26 @@ app.get('/feed/map/json', (req, res) => {
     })
 })
 
+app.get('/ce/feedCost', (req, res) => {
+    if (req.query.from == null || req.query.to == null) {
+        res.send('กรุณาระบุช่วงวันที่ด้วย')
+    } else {
+        const feedCost = 'SELECT Feed_Codes.FeedCode, Feed_Codes.T_Definition, sum(LossCost) as loss, Sum(Cost) as cost From FeedTransaction LEFT JOIN Feed_Codes ON FeedTransaction.FeedCode = Feed_Codes.FeedCode WHERE Date BETWEEN "2020-08-01" AND "2020-10-31" && void != 1 GROUP BY FeedCode'
+        pool.query(feedCost, (err, rows) => {
+            if (err) throw err
+            const cost = []
+            const jsonFeedCost = { "sumFeedCost": cost }
+            rows.forEach(feed => {
+                cost.push({ feedCode: feed.FeedCode, feedDef: feed.T_Definition, lossCost: feed.loss, feedCost: feed.cost })
+            })
+            res.send(jsonFeedCost)
+            //console.log(farmFeed)
+        })
+    }
+
+
+})
+
 app.get('/ce/qtest', (req, res) => {
     sql.connect(config, function (err) {
         //if (err) console.log(err);
@@ -190,7 +209,7 @@ app.get('/ce/qtest', (req, res) => {
     })
 })
 
-app.get('/ce/intRequest', (req, res) => {
+app.get('/ce/invRequest', (req, res) => {
 
     res.send('it gonna be a while for this request.')
 })
@@ -235,12 +254,12 @@ app.get('/ce/catch', (req, res) => {
 // })
 
 app.get('/ce/sell', (req, res) => {
-    //console.log(req.query)
+    // console.log(req.query)
     if (req.query.from == null || req.query.to == null) {
         res.send('กรุณาระบุช่วงวันที่ด้วย')
     } else if (req.query.flag == null) {
-        const saleInfo = 'select Client_Manifold.vpac_Ref1, T_name, Date, sum(Amount) as headCount, sum(Param2) as weight, Reference4, Cbatch_Details.id as detailId, flag, AC_Ref1, void From Cbatch_Details left join Client_Manifold ON Reference4 = Client_Manifold.id where Date Between "' + req.query.from + '" AND "' + req.query.to + '" && ( EventType = 231 || EventType = 232 ) group by Date, Reference4;'
-        const saleBasic = 'select Client_Manifold.vpac_Ref1, T_name, Date, Sum(Amount) as headCount, sum(Param1) as weight, Reference1, Batch_Details.id as detailId, flag, AC_Ref1, void  from Batch_Details left join Client_Manifold ON Reference1 = Client_Manifold.id where Date Between "' + req.query.from + '" AND "' + req.query.to + '" &&  EventType = 32 group by Date, Reference1;'
+        const saleInfo = 'select Client_Manifold.vpac_Ref1, T_name, Date, sum(Amount) as headCount, sum(Param2) as weight, Reference4, Cbatch_Details.id as detailId, flag, AC_Ref1, void From Cbatch_Details left join Client_Manifold ON Reference4 = Client_Manifold.id where Date Between "' + req.query.from + '" AND "' + req.query.to + '" && void != 1 && ( EventType = 231 || EventType = 232 ) group by Date, Reference4;'
+        const saleBasic = 'select Client_Manifold.vpac_Ref1, T_name, Date, Sum(Amount) as headCount, sum(Param1) as weight, Reference1, Batch_Details.id as detailId, flag, AC_Ref1, void  from Batch_Details left join Client_Manifold ON Reference1 = Client_Manifold.id where Date Between "' + req.query.from + '" AND "' + req.query.to + '" && void != 1 && EventType = 32 group by Date, Reference1;'
         console.log('either null')
         pool.query(saleInfo, (err, rows) => {
             if (err) throw err
@@ -268,9 +287,9 @@ app.get('/ce/sell', (req, res) => {
             })
         })
     } else {
-        const saleInfo = 'select Client_Manifold.vpac_Ref1, T_name, Date, sum(Amount) as headCount, sum(Param2) as weight, Reference4, Cbatch_Details.id as detailId, flag, AC_Ref1, void From Cbatch_Details left join Client_Manifold ON Reference4 = Client_Manifold.id where Date Between "' + req.query.from + '" AND "' + req.query.to + '" && ( EventType = 231 || EventType = 232 ) && flag = "' + req.query.flag + '" group by Date, Reference4;'
-        const saleBasic = 'select Client_Manifold.vpac_Ref1, T_name, Date, Sum(Amount) as headCount, sum(Param1) as weight, Reference1, Batch_Details.id as detailId, flag, AC_Ref1, void  from Batch_Details left join Client_Manifold ON Reference1 = Client_Manifold.id where Date Between "' + req.query.from + '" AND "' + req.query.to + '" &&  EventType = 32 && flag = "' + req.query.flag + '"  group by Date, Reference1;'
-        //console.log(saleInfo)
+        const saleInfo = 'select Client_Manifold.vpac_Ref1, T_name, Date, sum(Amount) as headCount, sum(Param2) as weight, Reference4, Cbatch_Details.id as detailId, flag, AC_Ref1, void From Cbatch_Details left join Client_Manifold ON Reference4 = Client_Manifold.id where Date Between "' + req.query.from + '" AND "' + req.query.to + '" && void != 1 && ( EventType = 231 || EventType = 232 ) && flag = "' + req.query.flag + '" group by Date, Reference4;'
+        const saleBasic = 'select Client_Manifold.vpac_Ref1, T_name, Date, Sum(Amount) as headCount, sum(Param1) as weight, Reference1, Batch_Details.id as detailId, flag, AC_Ref1, void  from Batch_Details left join Client_Manifold ON Reference1 = Client_Manifold.id where Date Between "' + req.query.from + '" AND "' + req.query.to + '" && void != 1 &&  EventType = 32 && flag = "' + req.query.flag + '"  group by Date, Reference1;'
+
         pool.query(saleInfo, (err, rows) => {
             if (err) throw err
             pigType = 'FG 05' // this may be change according to A/C
@@ -278,9 +297,9 @@ app.get('/ce/sell', (req, res) => {
             const jsonAR = { "saleOrder": catcher }
             rows.forEach(saleInfo => {
                 if (saleInfo.Reference4 === 0) {
-                    catcher.push({ AC_Id: '0', name: 'ขายสด ขาจร', date: saleInfo.Date, AC_pigTypeId: pigType, headCount: saleInfo.headCount, weight: saleInfo.weight, ce: 1, detailId: saleInfo.detailId, flag: saleInfo.flag })
+                    catcher.push({ AC_Id: '0', name: 'ขายสด ขาจร', date: saleInfo.Date, AC_pigTypeId: pigType, headCount: saleInfo.headCount, weight: saleInfo.weight, ce: 1, detailId: saleInfo.detailId, flag: saleInfo.flag, AC_Ref1: saleInfo.AC_Ref1, void: saleInfo.void })
                 } else {
-                    catcher.push({ AC_Id: saleInfo.vpac_Ref1, name: saleInfo.T_name, date: saleInfo.Date, AC_pigTypeId: pigType, headCount: saleInfo.headCount, weight: saleInfo.weight, ce: 1, detailId: saleInfo.detailId, flag: saleInfo.flag })
+                    catcher.push({ AC_Id: saleInfo.vpac_Ref1, name: saleInfo.T_name, date: saleInfo.Date, AC_pigTypeId: pigType, headCount: saleInfo.headCount, weight: saleInfo.weight, ce: 1, detailId: saleInfo.detailId, flag: saleInfo.flag, AC_Ref1: saleInfo.AC_Ref1, void: saleInfo.void })
                 }
             })
             pool.query(saleBasic, (err, rows) => {
@@ -288,9 +307,9 @@ app.get('/ce/sell', (req, res) => {
                 //console.log(rows) 
                 rows.forEach(saleBasic => {
                     if (saleBasic.Reference1 === 0) {
-                        catcher.push({ AC_Id: '0', name: 'ขายสด ขาจร', date: saleBasic.Date, AC_pigTypeId: pigType, headCount: saleBasic.headCount, weight: saleBasic.weight, ce: 0, detailId: saleBasic.detailId, flag: saleBasic.flag })
+                        catcher.push({ AC_Id: '0', name: 'ขายสด ขาจร', date: saleBasic.Date, AC_pigTypeId: pigType, headCount: saleBasic.headCount, weight: saleBasic.weight, ce: 0, detailId: saleBasic.detailId, flag: saleBasic.flag, AC_Ref1: saleBasic.AC_Ref1, void: saleBasic.void })
                     } else {
-                        catcher.push({ AC_Id: saleBasic.vpac_Ref1, name: saleBasic.T_name, date: saleBasic.Date, AC_pigTypeId: pigType, headCount: saleBasic.headCount, weight: saleBasic.weight, ce: 0, detailId: saleBasic.detailId, flag: saleBasic.flag })
+                        catcher.push({ AC_Id: saleBasic.vpac_Ref1, name: saleBasic.T_name, date: saleBasic.Date, AC_pigTypeId: pigType, headCount: saleBasic.headCount, weight: saleBasic.weight, ce: 0, detailId: saleBasic.detailId, flag: saleBasic.flag, AC_Ref1: saleBasic.AC_Ref1, void: saleBasic.void })
                     }
                 })
                 res.send(jsonAR)
@@ -299,9 +318,41 @@ app.get('/ce/sell', (req, res) => {
     }
 })
 
-app.get('/ce/liveStock', (req, res) => {
-    res.send('will send pig inventory on request date')
+app.get('/liveStock', (req, res) => {
+    //console.log(req.query)
+    if (req.query.pointDate == null) {
+        res.send('กรุณาระบุวันที่ต้องการทราบ')
+    } else {
+        if (req.query.parameter == null || req.query.parameter == 'count') {
+            //send pig count
+            const stockPig = 'select APILiveStock("P","' + req.query.pointDate + '","count") as piglet, APILiveStock("N","' + req.query.pointDate + '","count") as nursery, APILiveStock("G","' + req.query.pointDate + '","count") as grower, APILiveStock("F","' + req.query.pointDate + '","count") as finisher, APILiveStock("CF","' + req.query.pointDate + '","count") as Cfinisher;'
+            pool.query(stockPig, (err, rows) => {
+                if (err) throw err
+                const liveStockSum = []
+                const jsonLiveStock = { "liveStockHeadCount": liveStockSum }
+                rows.forEach(pType => {
+                    liveStockSum.push({ หมูดูดนม: pType.piglet, หมุอนุบาล: pType.nursery, หมูรุ่น: pType.grower, หมูขุนในฟาร์ม: pType.finisher, หมูขุนลูกเล้า: pType.Cfinisher })
+                })
+                res.send(jsonLiveStock)
+            })
+        } else if (req.query.parameter == 'weight') {
+            // send pig weight
+            const stockPig = 'select APILiveStock("P","' + req.query.pointDate + '","weight") as piglet, APILiveStock("N","' + req.query.pointDate + '","weight") as nursery, APILiveStock("G","' + req.query.pointDate + '","weight") as grower, APILiveStock("F","' + req.query.pointDate + '","weight") as finisher, APILiveStock("CF","' + req.query.pointDate + '","weight") as Cfinisher;'
+            pool.query(stockPig, (err, rows) => {
+                if (err) throw err
+                const liveStockSum = []
+                const jsonLiveStock = { "liveStockEstimatedWeight": liveStockSum }
+                rows.forEach(pType => {
+                    liveStockSum.push({ หมูดูดนม: pType.piglet, หมุอนุบาล: pType.nursery, หมูรุ่น: pType.grower, หมูขุนในฟาร์ม: pType.finisher, หมูขุนลูกเล้า: pType.Cfinisher })
+                })
+                res.send(jsonLiveStock)
+            })
+        } else {
+            res.send('incorrect request')
+        }
+    }
 })
+
 
 //this get will be deleted because of complexity to get from DB (to have data for vega-lite ) working in php instead
 app.get('/ce/stat/cbatch', (req, res) => {
@@ -349,26 +400,26 @@ app.listen(port, () => {
     console.log('server listening on port:=> ' + port)
 })
 
-function chkFeed(fCode, fLot) {
-    const cType = `SELECT * FROM Feed_Codes WHERE FeedCode = '${fCode}';`
-    const cRepeat = `SELECT * FROM Feed_Manifold WHERE Lot_Number = '${fLot}';`
+// function chkFeed(fCode, fLot) {
+//     const cType = `SELECT * FROM Feed_Codes WHERE FeedCode = '${fCode}';`
+//     const cRepeat = `SELECT * FROM Feed_Manifold WHERE Lot_Number = '${fLot}';`
 
-    pool.query(cType, (error, rows) => {
-        if (error) throw error
-        if (rows.length === 0) {
-            console.log("unreconized feed " + cType)
-            return -1
-        } else {
-            pool.query(cRepeat, (error, rows) => {
-                if (error) throw error
-                if (rows.length > 0) {
-                    console.log("feed repeated")
-                    return 0
-                } else {
-                    console.log("now can be record")
-                    return 1
-                }
-            })
-        }
-    })
-} // end function fCode
+//     pool.query(cType, (error, rows) => {
+//         if (error) throw error
+//         if (rows.length === 0) {
+//             console.log("unreconized feed " + cType)
+//             return -1
+//         } else {
+//             pool.query(cRepeat, (error, rows) => {
+//                 if (error) throw error
+//                 if (rows.length > 0) {
+//                     console.log("feed repeated")
+//                     return 0
+//                 } else {
+//                     console.log("now can be record")
+//                     return 1
+//                 }
+//             })
+//         }
+//     })
+// } // end function fCode

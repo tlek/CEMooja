@@ -1,0 +1,37 @@
+GET
+
+/liveStock   **for account purpose**
+
+APILiveStock(pigType,pointDate,parameter)
+    pigType => N, G, F, CF
+    parameter => count, weight
+    pointDate is required the rest are option if not specified will send all
+
+
+
+POST
+
+BEGIN
+ CASE parameter
+   WHEN 'count' THEN
+    IF(pigType = 'P') THEN
+     RETURN(select sum(AliveBorn + Fostered - Neglected - Death) From Flocks WHERE BirthDate < pointDate && (WeanedDate > pointDate || isnull(WeanedDate)) && Finish != 9);
+     ELSEIF(pigType = 'N' || pigType = 'G' || pigType = 'F')THEN
+	 RETURN (select sum(StartHeadCount + AddinHeadCount + MovedIn - MovedOut - Death -Disposed) as StockHC from Batches where Finish != 9 && Type = pigType && StartDate < pointDate && (FinishedDate > pointDate || isnull(FinishedDate)));
+     ELSEIF (pigType = 'CF') THEN
+     RETURN (select sum(StartHeadCount- Death - Disposed) From Cbatches WHERE StartDate < pointDate && (FinishedDate > pointDate || isnull(FinishedDate)) && Stage != 9);
+    END IF;
+   WHEN 'weight' THEN
+   	IF(pigType = 'N') THEN
+     RETURN ((SELECT NWeight From CE_Parameters WHERE Definition = 'Default' )*(select sum(StartHeadCount + AddinHeadCount + MovedIn - MovedOut - Death -Disposed) as StockHC from Batches where Finish != 9 && Type = pigType && StartDate < pointDate && (FinishedDate > pointDate || isnull(FinishedDate)))) ;
+    ELSEIF (pigType = 'G') THEN
+      RETURN((SELECT GWeight From CE_Parameters WHERE Definition = 'Default')*(select sum(StartHeadCount + AddinHeadCount + MovedIn - MovedOut - Death -Disposed) as StockHC from Batches where Finish != 9 && Type = pigType && StartDate < pointDate && (FinishedDate > pointDate || isnull(FinishedDate))));
+    ELSEIF(pigType = 'F') THEN
+      RETURN((SELECT FWeight From CE_Parameters WHERE Definition = 'Default')*(select sum(StartHeadCount + AddinHeadCount + MovedIn - MovedOut - Death -Disposed) as StockHC from Batches where Finish != 9 && Type = pigType && StartDate < pointDate && (FinishedDate > pointDate || isnull(FinishedDate))));
+     ELSEIF(pigType = 'P') THEN
+       RETURN((SELECT PWeight From CE_Parameters WHERE Definition = 'Default')*(select sum(AliveBorn + Fostered - Neglected - Death) from Flocks where Finish != 9 && BirthDate < pointDate && (WeanedDate > pointDate || isnull(WeanedDate))));
+     ELSEIF(pigType = 'CF') THEN
+       RETURN((SELECT CFWeight From CE_Parameters WHERE Definition = 'Default')*(select sum(StartHeadCount- Death - Disposed) from Cbatches where Stage != 9 && StartDate < pointDate && (FinishedDate > pointDate || isnull(FinishedDate))));
+    END IF;
+  END CASE;
+ END
