@@ -1,0 +1,36 @@
+<div class="container">
+    {{>header}}
+    <p></p>
+    <h2>{{Head}}</h2>
+
+
+    {{!-- <form action="recordService.php" method="POST"> --}}
+        <form action="/ce/sidekick" method="GET">
+            <div class="card text-center border-1">
+                <h5 class="card-header d-block alert alert-primary" id="bTabServiceHead">{{Head}}</h5>
+                <div class="card-body">
+                    <h5 class="card-title d-block" id="bTabServiceTitle">Known Date
+                    </h5>
+                    <p class="card-text d-block" id="bTabServiceDetail">choose known Date and category </p>
+                    <div class="row mt-5">
+                        <div class="form-group col-sm-6 text-left">
+                            <label for="date" class="control-label form-group mb-0">วันที่</label>
+                            <input type="date" min="2019-01-01" max="{{tillToday}}" class="form-control mb-2"
+                                name="qDate" id="qDate" value="{{qsDate}}">
+                        </div>
+                        <div class="form-group col-sm-6 text-left">
+                            <label for="breed" class="control-label form-group mb-0">category </label>
+                            <select value="4" class="custom-select mr-sm-2" id="cat" name="cat" required>
+                                {{!-- <option value="0">เลือกชนิดเหตุการณ์</option> --}}
+                                <option value="2">วันผสม</option>
+                                <option value="4">วันคลอด</option>
+                                <option value="8">วันหย่านม</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary m-2 px-4 " id="submit_sv">เลือกดู</button>
+                </div>
+        </form>
+</div>
+{{{dateList}}}
+{{!-- </table> --}}

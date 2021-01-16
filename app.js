@@ -31,6 +31,7 @@ app.set('view engine', 'hbs')
 app.set("views", viewsPath)
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(express.json({ limit: '1mb' }))
+//app.use(express.static(publicDirectoryPath))
 
 const pool = mysql.createPool(require('./dbh.js'))
 // const pool = mysql.createPool({
@@ -253,6 +254,7 @@ app.get('/ce/catch', (req, res) => {
 //     }
 // })
 
+
 app.get('/ce/sell', (req, res) => {
     // console.log(req.query)
     if (req.query.from == null || req.query.to == null) {
@@ -387,6 +389,51 @@ app.get('/ce/stat/cbatch', (req, res) => {
             res.send('result coming soon')
         })
     }
+})
+Date.prototype.addDays = function (days) {
+    var date = new Date(this.valueOf());
+    date.setDate(date.getDate() + days);
+    return date;
+}
+Date.prototype.toShort = function () {
+    return `${this.getUTCFullYear()}-${(this.getUTCMonth() + 1).toString().padStart(2, "0")}-${this.getUTCDate().toString().padStart(2, "0")}`
+}
+app.get('/ce/sidekick', (req, res) => {
+    //console.log('qDate = ' + req.query.qDate)
+    let today = new Date();
+    //console.log('cat = ' + req.query.cat)
+    dateList = '<table class="table table-hover table-sm"><th>วันผสม</th><th>วันคลอด</th><th>วันหย่านม</th>'
+    let tillToday = `${today.getUTCFullYear()}-${(today.getUTCMonth() + 1).toString().padStart(2, "0")}-${today.getUTCDate().toString().padStart(2, "0")}`
+    if (req.query.cat) {
+        switch (req.query.cat) {
+            case "2":
+                if (req.query.qDate == undefined || req.query.qDate === "") {
+                    qDate = new Date()
+                    sDate = new Date()
+                    console.log(sDate)
+                } else {
+                    qDate = req.query.qDate + "T12:30:30Z"
+                    sDate = new Date(qDate)
+                }
+                fDate = sDate.addDays(116)
+                wDate = fDate.addDays(28)
+                break;
+            case "4":
+                qDate = req.query.qDate + "T12:30:30Z"
+                fDate = new Date(qDate)
+                sDate = fDate.addDays(-116)
+                wDate = fDate.addDays(28)
+                break
+            case "8":
+                qDate = req.query.qDate + "T12:30:30Z"
+                wDate = new Date(qDate)
+                fDate = wDate.addDays(-28)
+                sDate = fDate.addDays(-116)
+                break
+        }
+        dateList += '<tr><td>' + sDate.toShort() + '</td><td>' + fDate.toShort() + '</td><td>' + wDate.toShort() + '</td><tr>'
+    }
+    res.render('sidekick', { title: 'หมูจ๋า CE', Head: 'ตัวช่วยในเรื่องวันที่ ', author: 'Somporn', tillToday: tillToday, qsDate: req.query.qDate, cat: req.query.cat, dateList: dateList })
 })
 
 app.get('*', (req, res) => {
