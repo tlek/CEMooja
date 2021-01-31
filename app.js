@@ -9,7 +9,9 @@
 //   user: 'sa',
 //   password: 'Inf0Maic'
 // }
-require('./dbh.js')
+
+// require('./dbh.js')
+
 const bodyParser = require('body-parser')
 const mysql = require('mysql')
 const path = require('path')
@@ -407,13 +409,20 @@ app.get('/ce/sidekick', (req, res) => {
     if (req.query.cat) {
         switch (req.query.cat) {
             case "2":
-                if (req.query.qDate == undefined || req.query.qDate === "") {
-                    qDate = new Date()
-                    sDate = new Date()
-                    console.log(sDate)
-                } else {
+                // if (req.query.qDate == undefined || req.query.qDate === "") {
+                //     qDate = new Date()
+                //     sDate = new Date()
+                //     console.log(sDate)
+                // } else {
+                //     qDate = req.query.qDate + "T12:30:30Z"
+                //     sDate = new Date(qDate)
+                // }
+                if (typeof (req.query.qDate) !== "undefined") {
                     qDate = req.query.qDate + "T12:30:30Z"
                     sDate = new Date(qDate)
+                } else {
+                    qDate = new Date()
+                    sDate = new Date()
                 }
                 fDate = sDate.addDays(116)
                 wDate = fDate.addDays(28)
@@ -434,6 +443,10 @@ app.get('/ce/sidekick', (req, res) => {
         dateList += '<tr><td>' + sDate.toShort() + '</td><td>' + fDate.toShort() + '</td><td>' + wDate.toShort() + '</td><tr>'
     }
     res.render('sidekick', { title: 'หมูจ๋า CE', Head: 'ตัวช่วยในเรื่องวันที่ ', author: 'Somporn', tillToday: tillToday, qsDate: req.query.qDate, cat: req.query.cat, dateList: dateList })
+})
+
+app.post('/conjugate', (req, res) => {
+    res.send(`will work from here ${req}`)
 })
 
 app.get('*', (req, res) => {
